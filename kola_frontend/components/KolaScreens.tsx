@@ -452,6 +452,10 @@ type OnboardingMember = {
   address: string;
 };
 
+type SquadConfig = {
+  beneficiary_account_configured?: boolean;
+};
+
 const blankMember = (): OnboardingMember => ({
   rowId: crypto.randomUUID(),
   full_name: "",
@@ -485,13 +489,41 @@ export function OnboardingPage() {
   const [createdGroup, setCreatedGroup] = useState<KolaGroup | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [backendBeneficiaryConfigured, setBackendBeneficiaryConfigured] = useState(false);
   const progress = createdGroup ? 100 : 66;
+
+  useEffect(() => {
+    let active = true;
+
+    fetch("/api/squad/config")
+      .then((response) => response.ok ? response.json() as Promise<SquadConfig> : null)
+      .then((config) => {
+        if (active && config?.beneficiary_account_configured) {
+          setBackendBeneficiaryConfigured(true);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function updateMember(index: number, key: keyof OnboardingMember, value: string) {
     setMembersList((list) => list.map((member, i) => i === index ? { ...member, [key]: value } : member));
   }
 
   async function handleCreateGroup() {
+    const settlementAccount = beneficiaryAccount.replace(/\D/g, "");
+    if (!backendBeneficiaryConfigured && settlementAccount.length !== 10) {
+      setCreateError("Enter a 10-digit Squad beneficiary account before creating virtual accounts.");
+      return;
+    }
+    if (beneficiaryAccount && settlementAccount.length !== 10) {
+      setCreateError("Squad beneficiary account must be exactly 10 digits.");
+      return;
+    }
+
     setIsCreating(true);
     setCreateError(null);
     try {
@@ -500,7 +532,7 @@ export function OnboardingPage() {
         description,
         contribution_amount: amount.replace(/,/g, ""),
         contribution_frequency: "weekly",
-        beneficiary_account: beneficiaryAccount || undefined,
+        beneficiary_account: settlementAccount || undefined,
         members: membersList.map(({ rowId: _rowId, ...member }) => member),
       });
       setCreatedGroup(group);
@@ -523,7 +555,10 @@ export function OnboardingPage() {
             <div className="mt-5 grid gap-4">
               <Input label="Group name" value={groupName} onChange={(event) => setGroupName(event.target.value)} />
               <Input label="Weekly contribution amount (N)" inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} />
-              <Input label="Squad beneficiary account" inputMode="numeric" maxLength={10} value={beneficiaryAccount} onChange={(event) => setBeneficiaryAccount(event.target.value)} placeholder="10-digit GTBank account, or set env on backend" />
+              <div>
+                <Input label="Squad beneficiary account" inputMode="numeric" maxLength={10} value={beneficiaryAccount} onChange={(event) => setBeneficiaryAccount(event.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="10-digit GTBank settlement account" />
+                <p className="mt-2 text-xs text-ink-500">{backendBeneficiaryConfigured ? "Backend settlement account is configured; this field can be left empty." : "Required for Squad virtual account creation unless SQUAD_BENEFICIARY_ACCOUNT is set on the backend."}</p>
+              </div>
               <div>
                 <span className="mb-2 block text-sm font-medium text-ink-700">Contribution day</span>
                 <div className="grid grid-cols-7 gap-2">

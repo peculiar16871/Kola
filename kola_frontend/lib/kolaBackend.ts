@@ -33,19 +33,27 @@ export async function fetchKolaBackend(path: string, init: RequestInit = {}) {
   });
 }
 
+function getErrorMessage(body: Record<string, any>) {
+  if (typeof body.error === "string") return body.error;
+  if (typeof body.detail === "string") return body.detail;
+  if (typeof body.detail?.message === "string") return body.detail.message;
+  if (typeof body.detail?.squad_response?.message === "string") return body.detail.squad_response.message;
+  if (typeof body.message === "string") return body.message;
+  return "KOLA backend request failed.";
+}
+
 export async function proxyKolaJson(path: string, init: RequestInit = {}) {
   const response = await fetchKolaBackend(path, init);
   const body = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const detail =
-      typeof body.detail === "string"
-        ? body.detail
-        : "KOLA backend request failed.";
     return {
       ok: false,
       status: response.status,
-      body: { error: detail },
+      body: {
+        error: getErrorMessage(body),
+        detail: body.detail ?? body.error ?? body,
+      },
     };
   }
 
