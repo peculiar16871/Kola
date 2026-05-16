@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/Input";
 import { LoadingDots } from "@/components/ui/LoadingDots";
 import { Logo } from "@/components/Logo";
 import { approvalSignals, events, lenderStats, members, scoreFactors, stats, steps, trustItems } from "@/lib/data";
-import { createGroup, getTraderScore, GroupMemberRead, ScoreRead } from "@/lib/api";
 import { createKolaGroup, fetchAminatAiScore, fetchAminatScore, fetchTraderScore, KolaGroup, KolaScore } from "@/lib/kolaApi";
 import { useClipboard } from "@/hooks/useClipboard";
 import { useCountUp } from "@/hooks/useCountUp";
@@ -466,30 +465,42 @@ const blankMember = (): OnboardingMember => ({
 });
 
 export function OnboardingPage() {
-  const [membersList, setMembersList] = useState(members.slice(0, 3));
+  const [groupName, setGroupName] = useState("Mile 12 Tomato Traders");
+  const [amount, setAmount] = useState("5000.00");
+  const [description, setDescription] = useState("Weekly trader contribution group");
+  const [beneficiaryAccount, setBeneficiaryAccount] = useState("");
+  const [membersList, setMembersList] = useState<OnboardingMember[]>([
+    {
+      ...blankMember(),
+      full_name: "Amina Bello",
+      phone: "08012345678",
+      email: "amina@example.com",
+      middle_name: "Ngozi",
+      bvn: "22343211654",
+      dob: "07/19/1990",
+      address: "22 Broad Street, Lagos"
+    }
+  ]);
   const [createdGroup, setCreatedGroup] = useState<KolaGroup | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const progress = createdGroup ? 100 : 66;
+
+  function updateMember(index: number, key: keyof OnboardingMember, value: string) {
+    setMembersList((list) => list.map((member, i) => i === index ? { ...member, [key]: value } : member));
+  }
 
   async function handleCreateGroup() {
     setIsCreating(true);
     setCreateError(null);
     try {
       const group = await createKolaGroup({
-        name: "Mile 12 Tomato Traders",
-        description: "Weekly tomato trader contribution group",
-        contribution_amount: "5000.00",
+        name: groupName,
+        description,
+        contribution_amount: amount.replace(/,/g, ""),
         contribution_frequency: "weekly",
-        members: membersList.map((member, index) => ({
-          full_name: member.name,
-          phone: `080300000${index + 1}`,
-          email: `${member.name.toLowerCase().replaceAll(" ", ".")}@kola.local`,
-          bvn: `2234321165${index}`,
-          dob: "07/19/1990",
-          gender: "2",
-          address: "Mile 12 Market, Lagos",
-        })),
+        beneficiary_account: beneficiaryAccount || undefined,
+        members: membersList.map(({ rowId: _rowId, ...member }) => member),
       });
       setCreatedGroup(group);
     } catch (error) {
@@ -539,7 +550,7 @@ export function OnboardingPage() {
           </Card>
           <Card className="relative p-6">
             <h2 className="font-dm-serif text-2xl">Review & Create</h2>
-            <div className="mt-4 border-l-4 border-kola-500 bg-kola-50 p-4 text-sm text-kola-800">Group: Mile 12 Tomato Traders<br />Weekly contribution: N5,000 every Friday<br />Members: {membersList.length} people<br />Backend: Squad VA generation via KOLA API</div>
+            <div className="mt-4 border-l-4 border-kola-500 bg-kola-50 p-4 text-sm text-kola-800">Group: {groupName}<br />Weekly contribution: N{amount} every Friday<br />Members: {membersList.length} people<br />Backend: Squad VA generation via KOLA API</div>
             <label className="mt-5 flex gap-3 text-sm text-ink-600"><input type="checkbox" /> I confirm all member details are correct and I have their consent.</label>
             {createError ? <div className="mt-4 border-l-4 border-error bg-red-50 p-4 text-sm text-error">{createError}</div> : null}
             <Button full className="mt-5" onClick={handleCreateGroup} disabled={isCreating}>{isCreating ? <LoadingDots /> : "Create Group & Generate Accounts"}</Button>
@@ -722,7 +733,7 @@ useEffect(() => {
           <div className="grid gap-6 xl:grid-cols-[1.15fr_.85fr]">
             <Card className="p-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div><h2 className="font-dm-serif text-3xl">Model Explanation</h2><p className="text-ink-500">Each bar shows how a verified signal moved Aminat's score.</p></div>
+                <div><h2 className="font-dm-serif text-3xl">Model Explanation</h2><p className="text-ink-500">Each bar shows how a verified signal moved Aminat&apos;s score.</p></div>
                 <Badge>Explainable AI</Badge>
               </div>
               <div className="mt-8"><ShapBars factors={liveScoreFactors} /></div>
