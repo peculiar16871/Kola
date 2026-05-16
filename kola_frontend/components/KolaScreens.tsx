@@ -469,6 +469,7 @@ export function OnboardingPage() {
   const [amount, setAmount] = useState("5000.00");
   const [description, setDescription] = useState("Weekly trader contribution group");
   const [beneficiaryAccount, setBeneficiaryAccount] = useState("");
+  const [contributionDay, setContributionDay] = useState("Fri");
   const [membersList, setMembersList] = useState<OnboardingMember[]>([
     {
       ...blankMember(),
@@ -523,7 +524,22 @@ export function OnboardingPage() {
               <Input label="Group name" value={groupName} onChange={(event) => setGroupName(event.target.value)} />
               <Input label="Weekly contribution amount (N)" inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} />
               <Input label="Squad beneficiary account" inputMode="numeric" maxLength={10} value={beneficiaryAccount} onChange={(event) => setBeneficiaryAccount(event.target.value)} placeholder="10-digit GTBank account, or set env on backend" />
-              <div><span className="mb-2 block text-sm font-medium text-ink-700">Contribution day</span><div className="grid grid-cols-7 gap-2">{["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((d) => <button key={d} type="button" className={`min-h-11 rounded-md border ${d === "Fri" ? "border-kola-500 bg-kola-500 text-white" : "border-ink-200"}`}>{d}</button>)}</div></div>
+              <div>
+                <span className="mb-2 block text-sm font-medium text-ink-700">Contribution day</span>
+                <div className="grid grid-cols-7 gap-2">
+                  {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((day) => (
+                    <button
+                      key={day}
+                      type="button"
+                      aria-pressed={contributionDay === day}
+                      onClick={() => setContributionDay(day)}
+                      className={`min-h-11 rounded-md border transition ${contributionDay === day ? "border-kola-500 bg-kola-500 text-white shadow-green" : "border-ink-200 bg-white text-ink-700 hover:border-kola-300 hover:bg-kola-50"}`}
+                    >
+                      {day}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <label><span className="mb-2 block text-sm font-medium text-ink-700">Group description</span><textarea maxLength={200} value={description} onChange={(event) => setDescription(event.target.value)} className="min-h-28 w-full rounded-md border border-ink-200 p-4" /></label>
             </div>
           </Card>
@@ -550,7 +566,7 @@ export function OnboardingPage() {
           </Card>
           <Card className="relative p-6">
             <h2 className="font-dm-serif text-2xl">Review & Create</h2>
-            <div className="mt-4 border-l-4 border-kola-500 bg-kola-50 p-4 text-sm text-kola-800">Group: {groupName}<br />Weekly contribution: N{amount} every Friday<br />Members: {membersList.length} people<br />Backend: Squad VA generation via KOLA API</div>
+            <div className="mt-4 border-l-4 border-kola-500 bg-kola-50 p-4 text-sm text-kola-800">Group: {groupName}<br />Weekly contribution: N{amount} every {contributionDay}<br />Members: {membersList.length} people<br />Backend: Squad VA generation via KOLA API</div>
             <label className="mt-5 flex gap-3 text-sm text-ink-600"><input type="checkbox" /> I confirm all member details are correct and I have their consent.</label>
             {createError ? <div className="mt-4 border-l-4 border-error bg-red-50 p-4 text-sm text-error">{createError}</div> : null}
             <Button full className="mt-5" onClick={handleCreateGroup} disabled={isCreating}>{isCreating ? <LoadingDots /> : "Create Group & Generate Accounts"}</Button>
