@@ -34,6 +34,7 @@ async def get_squad_config() -> dict[str, Any]:
         "mock_mode": settings.squad_mock_mode,
         "secret_key_prefix": settings.squad_secret_key[:12],
         "public_key_prefix": settings.squad_public_key[:12],
+        "beneficiary_account_configured": bool(settings.squad_beneficiary_account),
     }
 
 
