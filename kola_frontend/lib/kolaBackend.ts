@@ -2,10 +2,11 @@ const DEFAULT_BACKEND_URL = "https://kola-wib6.onrender.com";
 
 export function getKolaBackendConfig() {
   const baseUrl =
+    process.env.KOLA_BACKEND_URL ??
     process.env.KOLA_API_URL ??
     process.env.NEXT_PUBLIC_KOLA_API_URL ??
     DEFAULT_BACKEND_URL;
-  const apiKey = process.env.KOLA_API_KEY ?? null;
+  const apiKey = process.env.KOLA_BACKEND_API_KEY ?? process.env.KOLA_API_KEY ?? process.env.API_KEY ?? null;
 
   return {
     baseUrl: baseUrl.replace(/\/$/, ""),

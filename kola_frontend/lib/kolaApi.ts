@@ -55,10 +55,12 @@ export type CreateGroupPayload = {
   description?: string;
   contribution_amount?: string;
   contribution_frequency: string;
+  beneficiary_account?: string;
   members: Array<{
     full_name: string;
     phone: string;
     email?: string;
+    middle_name?: string;
     bvn?: string;
     dob?: string;
     gender?: string;
