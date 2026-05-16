@@ -24,6 +24,7 @@ Copy-Item .env.example .env
 ```
 
 Edit `.env` with your Supabase and Squad credentials.
+Set `SQUAD_BENEFICIARY_ACCOUNT` to your 10-digit GTBank settlement account so group creation does not need to send `beneficiary_account` each time.
 
 For local endpoint testing without calling Squad, set:
 
@@ -56,6 +57,24 @@ Start the API:
 ```powershell
 uvicorn app.main:app --reload
 ```
+
+## Docker
+
+From the repository root:
+
+```powershell
+docker build -t kola-backend .
+docker run --env-file .\kola_backend\.env -p 8000:8000 kola-backend
+```
+
+From this backend folder:
+
+```powershell
+docker build -t kola-backend .
+docker run --env-file .env -p 8000:8000 kola-backend
+```
+
+For Render Docker deploys, either use the root `Dockerfile`, or set the Blueprint path to `kola_backend/render.yaml`.
 
 Health check:
 
@@ -94,6 +113,7 @@ curl -X POST http://127.0.0.1:8000/api/groups/ `
     "description": "Weekly trader contribution group",
     "contribution_amount": "5000.00",
     "contribution_frequency": "weekly",
+    "beneficiary_account": "4920299492",
     "members": [
       {
         "full_name": "Amina Bello",
@@ -157,6 +177,7 @@ These routes require `X-API-Key` and call Squad with the backend secret key:
 - `POST /api/squad/transactions/initiate`
 - `GET /api/squad/transactions/{transaction_reference}/verify`
 - `GET /api/squad/transactions`
+- `GET /api/squad/wallet/balance`
 - `GET /api/squad/virtual-accounts`
 - `GET /api/squad/virtual-accounts/number/{virtual_account_number}`
 - `GET /api/squad/virtual-accounts/customer/{customer_identifier}`

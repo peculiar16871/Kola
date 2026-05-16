@@ -4,6 +4,7 @@ from typing import Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 
+from app.core.config import settings
 from app.core.security import require_api_key
 from app.services.squad import SquadError, SquadService
 
@@ -11,10 +12,29 @@ router = APIRouter(dependencies=[Depends(require_api_key)])
 
 
 def _squad_error(exc: SquadError) -> HTTPException:
+    detail: dict[str, object] = {"message": exc.message}
+    if exc.status_code is not None:
+        detail["squad_status_code"] = exc.status_code
+    if exc.response_body is not None:
+        detail["squad_response"] = exc.response_body
+    if exc.upstream_url is not None:
+        detail["upstream_url"] = exc.upstream_url
     return HTTPException(
         status_code=status.HTTP_502_BAD_GATEWAY,
-        detail="Squad API request failed",
+        detail=detail,
     )
+
+
+@router.get("/config")
+async def get_squad_config() -> dict[str, Any]:
+    return {
+        "configured_base_url": settings.squad_configured_base_url,
+        "effective_base_url": settings.squad_api_base_url,
+        "base_url_supported": settings.is_squad_base_url_supported,
+        "mock_mode": settings.squad_mock_mode,
+        "secret_key_prefix": settings.squad_secret_key[:12],
+        "public_key_prefix": settings.squad_public_key[:12],
+    }
 
 
 @router.post("/transactions/initiate")
@@ -56,6 +76,14 @@ async def query_transactions(
 
     try:
         return await SquadService().query_transactions(params)
+    except SquadError as exc:
+        raise _squad_error(exc) from exc
+
+
+@router.get("/wallet/balance")
+async def get_wallet_balance(currency_id: str = "NGN") -> dict[str, Any]:
+    try:
+        return await SquadService().get_wallet_balance(currency_id)
     except SquadError as exc:
         raise _squad_error(exc) from exc
 
