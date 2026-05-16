@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ArrowLeft, ArrowRight, Banknote, Check, CheckCircle2, ChevronDown, Clipboard, Eye, EyeOff, Lock, Menu, Phone, Plus, Search, ShieldCheck, Trash2, UserRound, X } from "lucide-react";
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/Input";
 import { LoadingDots } from "@/components/ui/LoadingDots";
 import { Logo } from "@/components/Logo";
 import { approvalSignals, events, lenderStats, members, scoreFactors, stats, steps, trustItems } from "@/lib/data";
+import { createGroup, getTraderScore, GroupMemberRead, ScoreRead } from "@/lib/api";
 import { useClipboard } from "@/hooks/useClipboard";
 import { useCountUp } from "@/hooks/useCountUp";
 import { useSSE } from "@/hooks/useSSE";
@@ -102,13 +103,13 @@ export function Footer() {
   );
 }
 
-export function ScoreDisplay({ compact = false }: { compact?: boolean }) {
-  const score = useCountUp(714, 1200, true, 600);
+export function ScoreDisplay({ compact = false, value = 714, label = "Good - Low Risk" }: { compact?: boolean; value?: number; label?: string }) {
+  const score = useCountUp(value, 1200, true, 600);
   return (
     <div aria-live="polite" className={`rounded-2xl border border-kola-400/30 bg-kola-950 p-6 text-white shadow-glow ${compact ? "" : "md:p-10"}`}>
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-kola-300">KOLA Score</p>
       <div className={`font-mono font-semibold ${compact ? "text-6xl" : "text-8xl md:text-9xl"}`}>{score}</div>
-      <span className="rounded-full bg-kola-400 px-3 py-1 text-sm font-semibold text-kola-950">Good · Low Risk</span>
+      <span className="rounded-full bg-kola-400 px-3 py-1 text-sm font-semibold text-kola-950">{label}</span>
       <div className="mt-8">
         <div className="h-3 rounded-full bg-gradient-to-r from-error via-amber-400 to-kola-400">
           <div className="ml-[73%] h-5 w-5 -translate-y-1 rounded-full border-4 border-white bg-kola-500" />
@@ -169,7 +170,7 @@ export function LandingPage() {
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-kola-300">The Problem</p>
               <h2 className="mt-4 font-fraunces text-4xl italic leading-tight sm:text-5xl">N13 trillion. That is the credit gap no bank will touch.</h2>
-              <p className="mt-6 max-w-xl text-lg leading-8 text-white/65">Nigeria's formal bureaus score loan histories and bank accounts. They are blind to the 14 million Nigerians running disciplined Ajo groups.</p>
+              <p className="mt-6 max-w-xl text-lg leading-8 text-white/65">Nigeria&apos;s formal bureaus score loan histories and bank accounts. They are blind to the 14 million Nigerians running disciplined Ajo groups.</p>
               <blockquote className="mt-8 border-l-4 border-kola-400 pl-5 text-white/80">She has been running a more disciplined credit operation than most bank customers for three years, and the bank cannot see a single day of it.</blockquote>
             </div>
             <div className="relative min-h-[360px]">
@@ -216,8 +217,8 @@ export function LandingPage() {
         </section>
         <section id="for-lenders" className="grain bg-kola-500 px-4 py-24 text-kola-950 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-4xl text-center">
-            <h2 className="font-fraunces text-5xl text-white">Ready to lend to Nigeria's most reliable borrowers?</h2>
-            <p className="mx-auto mt-5 max-w-2xl text-lg text-kola-950/75">Query KOLA's API. Get a Squad-verified credit score in milliseconds. No risk on your balance sheet.</p>
+            <h2 className="font-fraunces text-5xl text-white">Ready to lend to Nigeria&apos;s most reliable borrowers?</h2>
+            <p className="mx-auto mt-5 max-w-2xl text-lg text-kola-950/75">Query KOLA&apos;s API. Get a Squad-verified credit score in milliseconds. No risk on your balance sheet.</p>
             <Button href="/lender/dashboard" variant="light" className="mt-8">Access Lender Dashboard <ArrowRight size={18} /></Button>
           </div>
         </section>
@@ -268,7 +269,7 @@ function SignInForm() {
       </form>
       <div className="my-6 flex items-center gap-3 text-sm text-ink-400"><span className="h-px flex-1 bg-ink-200" />or<span className="h-px flex-1 bg-ink-200" /></div>
       <Button href="/lender/dashboard" variant="ghost" full>Sign in as a Lender</Button>
-      <p className="mt-6 text-center text-sm text-ink-500">Don't have an account? <Link className="text-kola-600" href="/auth/signup">Get started</Link></p>
+      <p className="mt-6 text-center text-sm text-ink-500">Don&apos;t have an account? <Link className="text-kola-600" href="/auth/signup">Get started</Link></p>
     </Card>
   );
 }
@@ -312,7 +313,7 @@ function SignupWizard() {
         <div className="text-center">
           <Phone className="mx-auto mb-4 h-12 w-12 text-kola-500" />
           <h1 className="font-dm-serif text-3xl">Verify your phone</h1>
-          <p className="mt-2 text-ink-500">We've sent a 6-digit code to +234 XXX XXX XXXX</p>
+          <p className="mt-2 text-ink-500">We&apos;ve sent a 6-digit code to +234 XXX XXX XXXX</p>
           <div className="mt-6 grid grid-cols-6 gap-2">
             {Array.from({ length: 6 }).map((_, index) => <input key={index} aria-label={`OTP digit ${index + 1}`} maxLength={1} inputMode="numeric" autoComplete={index === 0 ? "one-time-code" : undefined} className="h-12 rounded-md border border-ink-200 text-center text-lg focus:border-kola-500 focus:ring-4 focus:ring-kola-500/10" />)}
           </div>
@@ -330,10 +331,75 @@ function SignupWizard() {
 export function SignInPage() { return <AuthShell mode="signin" />; }
 export function SignupPage() { return <AuthShell mode="signup" />; }
 
+type OnboardingMember = {
+  rowId: string;
+  full_name: string;
+  phone: string;
+  email: string;
+  middle_name: string;
+  bvn: string;
+  dob: string;
+  gender: string;
+  address: string;
+};
+
+const blankMember = (): OnboardingMember => ({
+  rowId: crypto.randomUUID(),
+  full_name: "",
+  phone: "",
+  email: "",
+  middle_name: "",
+  bvn: "",
+  dob: "",
+  gender: "2",
+  address: ""
+});
+
 export function OnboardingPage() {
-  const [membersList, setMembersList] = useState(members.slice(0, 3));
-  const [created, setCreated] = useState(false);
-  const progress = created ? 100 : 66;
+  const [groupName, setGroupName] = useState("Mile 12 Tomato Traders");
+  const [amount, setAmount] = useState("5000.00");
+  const [description, setDescription] = useState("Weekly trader contribution group");
+  const [beneficiaryAccount, setBeneficiaryAccount] = useState("");
+  const [membersList, setMembersList] = useState<OnboardingMember[]>([
+    {
+      ...blankMember(),
+      full_name: "Amina Bello",
+      phone: "08012345678",
+      email: "amina@example.com",
+      middle_name: "Ngozi",
+      bvn: "22343211654",
+      dob: "07/19/1990",
+      address: "22 Broad Street, Lagos"
+    }
+  ]);
+  const [createdGroup, setCreatedGroup] = useState<GroupMemberRead[] | null>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const progress = createdGroup ? 100 : 66;
+
+  function updateMember(index: number, key: keyof OnboardingMember, value: string) {
+    setMembersList((list) => list.map((member, i) => i === index ? { ...member, [key]: value } : member));
+  }
+
+  async function submitGroup() {
+    setError("");
+    setLoading(true);
+    try {
+      const group = await createGroup({
+        name: groupName,
+        description,
+        contribution_amount: amount.replace(/,/g, ""),
+        contribution_frequency: "weekly",
+        beneficiary_account: beneficiaryAccount || undefined,
+        members: membersList.map(({ rowId: _rowId, ...member }) => member)
+      });
+      setCreatedGroup(group.members);
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : "Unable to create group");
+    } finally {
+      setLoading(false);
+    }
+  }
   return (
     <main className="min-h-screen bg-ink-50">
       <div className="fixed inset-x-0 top-0 z-50 h-1 bg-ink-200"><div className="h-full bg-kola-500 transition-all" style={{ width: `${progress}%` }} /></div>
@@ -344,27 +410,41 @@ export function OnboardingPage() {
           <Card className="p-6">
             <h2 className="font-dm-serif text-2xl">Group Details</h2>
             <div className="mt-5 grid gap-4">
-              <Input label="Group name" defaultValue="Mile 12 Tomato Traders" />
-              <Input label="Weekly contribution amount (N)" inputMode="decimal" defaultValue="5,000" />
-              <div><span className="mb-2 block text-sm font-medium text-ink-700">Contribution day</span><div className="grid grid-cols-7 gap-2">{["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((d) => <button key={d} className={`min-h-11 rounded-md border ${d === "Fri" ? "border-kola-500 bg-kola-500 text-white" : "border-ink-200"}`}>{d}</button>)}</div></div>
-              <label><span className="mb-2 block text-sm font-medium text-ink-700">Group description</span><textarea maxLength={200} className="min-h-28 w-full rounded-md border border-ink-200 p-4" /></label>
+              <Input label="Group name" value={groupName} onChange={(event) => setGroupName(event.target.value)} />
+              <Input label="Weekly contribution amount (N)" inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} />
+              <Input label="Squad beneficiary account" inputMode="numeric" maxLength={10} value={beneficiaryAccount} onChange={(event) => setBeneficiaryAccount(event.target.value)} placeholder="10-digit GTBank account, or set env on backend" />
+              <div><span className="mb-2 block text-sm font-medium text-ink-700">Contribution day</span><div className="grid grid-cols-7 gap-2">{["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((d) => <button key={d} type="button" className={`min-h-11 rounded-md border ${d === "Fri" ? "border-kola-500 bg-kola-500 text-white" : "border-ink-200"}`}>{d}</button>)}</div></div>
+              <label><span className="mb-2 block text-sm font-medium text-ink-700">Group description</span><textarea maxLength={200} value={description} onChange={(event) => setDescription(event.target.value)} className="min-h-28 w-full rounded-md border border-ink-200 p-4" /></label>
             </div>
           </Card>
           <Card className="p-6">
             <h2 className="font-dm-serif text-2xl">Add group members</h2>
             <p className="mt-1 text-ink-500">Each member will receive a Squad Virtual Account number.</p>
             <div className="mt-5 grid gap-3">
-              {membersList.map((member, index) => <div key={member.account} className="grid gap-3 rounded-xl border border-ink-200 p-4 sm:grid-cols-[40px_1fr_1fr_40px]"><span className="grid h-10 w-10 place-items-center rounded-full bg-kola-100 text-kola-700">{member.name[0]}</span><Input label="Full name" defaultValue={member.name} /><Input label="Phone number" defaultValue={member.phone} /><button aria-label="Delete member row" onClick={() => setMembersList((list) => list.filter((_, i) => i !== index))} className="text-error"><Trash2 /></button></div>)}
+              {membersList.map((member, index) => (
+                <div key={member.rowId} className="grid gap-3 rounded-xl border border-ink-200 p-4 sm:grid-cols-2">
+                  <Input label="Full name" value={member.full_name} onChange={(event) => updateMember(index, "full_name", event.target.value)} />
+                  <Input label="Phone number" value={member.phone} onChange={(event) => updateMember(index, "phone", event.target.value)} />
+                  <Input label="Email" type="email" value={member.email} onChange={(event) => updateMember(index, "email", event.target.value)} />
+                  <Input label="Middle name" value={member.middle_name} onChange={(event) => updateMember(index, "middle_name", event.target.value)} />
+                  <Input label="BVN" inputMode="numeric" maxLength={11} value={member.bvn} onChange={(event) => updateMember(index, "bvn", event.target.value)} />
+                  <Input label="DOB (MM/DD/YYYY)" value={member.dob} onChange={(event) => updateMember(index, "dob", event.target.value)} />
+                  <Input label="Gender (1 male, 2 female)" value={member.gender} onChange={(event) => updateMember(index, "gender", event.target.value)} />
+                  <Input label="Address" value={member.address} onChange={(event) => updateMember(index, "address", event.target.value)} />
+                  <button type="button" aria-label="Delete member row" onClick={() => setMembersList((list) => list.filter((_, i) => i !== index))} className="inline-flex items-center gap-2 text-error"><Trash2 size={18} /> Remove member</button>
+                </div>
+              ))}
             </div>
-            <button onClick={() => setMembersList([...membersList, members[3]])} className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-kola-500 text-kola-600"><Plus size={18} /> Add another member</button>
-            <p className="mt-3 text-sm text-ink-500">{membersList.length} members added · Minimum 2 required</p>
+            <button type="button" onClick={() => setMembersList([...membersList, blankMember()])} className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-kola-500 text-kola-600"><Plus size={18} /> Add another member</button>
+            <p className="mt-3 text-sm text-ink-500">{membersList.length} members added - Minimum 1 required</p>
           </Card>
           <Card className="relative p-6">
             <h2 className="font-dm-serif text-2xl">Review & Create</h2>
-            <div className="mt-4 border-l-4 border-kola-500 bg-kola-50 p-4 text-sm text-kola-800">Group: Mile 12 Tomato Traders<br />Weekly contribution: N5,000 every Friday<br />Members: {membersList.length} people</div>
+            <div className="mt-4 border-l-4 border-kola-500 bg-kola-50 p-4 text-sm text-kola-800">Group: {groupName}<br />Weekly contribution: N{amount} every Friday<br />Members: {membersList.length} people</div>
             <label className="mt-5 flex gap-3 text-sm text-ink-600"><input type="checkbox" /> I confirm all member details are correct and I have their consent.</label>
-            <Button full className="mt-5" onClick={() => setCreated(true)}>Create Group & Generate Accounts</Button>
-            {created ? <SuccessOverlay membersList={membersList} /> : null}
+            {error ? <p className="mt-4 rounded-md bg-red-50 p-3 text-sm text-error">{error}</p> : null}
+            <Button full className="mt-5" onClick={submitGroup} disabled={loading}>{loading ? <LoadingDots /> : "Create Group & Generate Accounts"}</Button>
+            {createdGroup ? <SuccessOverlay membersList={createdGroup} /> : null}
           </Card>
         </div>
       </section>
@@ -372,20 +452,21 @@ export function OnboardingPage() {
   );
 }
 
-function SuccessOverlay({ membersList }: { membersList: typeof members }) {
+function SuccessOverlay({ membersList }: { membersList: GroupMemberRead[] }) {
   return (
     <div className="absolute inset-0 z-10 rounded-2xl bg-white/95 p-6 backdrop-blur">
       <CheckCircle2 className="mx-auto h-16 w-16 text-kola-500" />
       <h3 className="mt-3 text-center font-dm-serif text-3xl">Group created successfully</h3>
-      <table className="mt-6 w-full text-sm"><tbody>{membersList.map((member) => <CopyRow key={member.account} member={member} />)}</tbody></table>
+      <table className="mt-6 w-full text-sm"><tbody>{membersList.map((member) => <CopyRow key={member.id} member={member} />)}</tbody></table>
       <div className="mt-6 flex flex-col gap-3 sm:flex-row"><Button href="/group/mile-12/feed" full>View Group Dashboard</Button><Button variant="ghost" full>Share Account Numbers</Button></div>
     </div>
   );
 }
 
-function CopyRow({ member }: { member: typeof members[number] }) {
-  const { copied, copy } = useClipboard(member.account);
-  return <tr className="border-b border-ink-100"><td className="py-2">{member.name}</td><td className="font-mono">{member.account}</td><td><button aria-label={`Copy ${member.name} account number`} onClick={copy}>{copied ? <Check size={16} /> : <Clipboard size={16} />}</button></td></tr>;
+function CopyRow({ member }: { member: GroupMemberRead }) {
+  const accountNumber = member.squad_va_number || "Pending";
+  const { copied, copy } = useClipboard(accountNumber);
+  return <tr className="border-b border-ink-100"><td className="py-2">{member.full_name}</td><td className="font-mono">{accountNumber}</td><td><button aria-label={`Copy ${member.full_name} account number`} onClick={copy}>{copied ? <Check size={16} /> : <Clipboard size={16} />}</button></td></tr>;
 }
 
 function DashboardShell({ children, title = "Contribution Feed" }: { children: React.ReactNode; title?: string }) {
@@ -439,24 +520,50 @@ export function ScorePage() {
 export function LenderDashboard({ queryOnly = false }: { queryOnly?: boolean }) {
   const [queried, setQueried] = useState(false);
   const [approved, setApproved] = useState(false);
+  const [queryValue, setQueryValue] = useState("");
+  const [scoreResult, setScoreResult] = useState<ScoreRead | null>(null);
+  const [queryError, setQueryError] = useState("");
+  const [queryLoading, setQueryLoading] = useState(false);
+  const [chartReady, setChartReady] = useState(false);
   const chartData = useMemo(() => Array.from({ length: 12 }, (_, i) => ({ name: `W${i + 1}`, score: 620 + i * 8 + (i % 3) * 12 })), []);
+  useEffect(() => setChartReady(true), []);
+  async function runScoreQuery() {
+    if (!queryValue.trim()) {
+      setQueryError("Enter a trader phone number or member ID.");
+      return;
+    }
+    setQueryError("");
+    setQueryLoading(true);
+    try {
+      const score = await getTraderScore(queryValue.trim());
+      setScoreResult(score);
+      setQueried(true);
+    } catch (exc) {
+      setScoreResult(null);
+      setQueryError(exc instanceof Error ? exc.message : "Unable to query score");
+    } finally {
+      setQueryLoading(false);
+    }
+  }
   return (
     <main className="min-h-screen bg-ink-50 lg:grid lg:grid-cols-[280px_1fr]">
       <aside className="hidden bg-ink-900 p-6 text-white lg:block"><Logo /><p className="mt-8 text-sm text-white/60">KOLA · Lender Portal</p><nav className="mt-8 grid gap-2 text-white/70">{["Dashboard","Query Score","Recent Queries","API Keys","Settings"].map((n) => <Link href="/lender/dashboard" key={n} className="rounded-lg px-3 py-2 hover:bg-white/10">{n}</Link>)}</nav></aside>
       <section className="p-4 sm:p-6 lg:p-10">
         <p className="text-sm text-ink-500">Good morning, GTBank MFB.</p>
         <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{lenderStats.map(([n,l]) => <Card key={l} className="p-5"><div className="font-mono text-3xl text-kola-600">{n}</div><p className="text-sm text-ink-500">{l}</p></Card>)}</div>
-        <Card className="mt-6 p-6"><h1 className="font-dm-serif text-4xl">Query a KOLA Score</h1><div className="mt-5 flex flex-col gap-3 sm:flex-row"><div className="relative flex-1"><Search className="absolute left-4 top-3.5 text-ink-400" size={18} /><input className="min-h-12 w-full rounded-md border border-ink-200 pl-11" placeholder="Trader phone number or KOLA ID" /></div><Button onClick={() => setQueried(true)}>Query Score</Button></div>{queryOnly || queried ? <div className="mt-6 section-reveal"><ResultCard approved={approved} onApprove={() => setApproved(true)} /></div> : null}</Card>
-        <Card className="mt-6 p-6"><h2 className="font-dm-serif text-3xl">Portfolio score trend</h2><div className="h-72"><ResponsiveContainer><AreaChart data={chartData}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" /><YAxis /><Tooltip /><Area type="monotone" dataKey="score" stroke="#1f8450" fill="#c5eed8" /></AreaChart></ResponsiveContainer></div></Card>
+        <Card className="mt-6 p-6"><h1 className="font-dm-serif text-4xl">Query a KOLA Score</h1><div className="mt-5 flex flex-col gap-3 sm:flex-row"><div className="relative flex-1"><Search className="absolute left-4 top-3.5 text-ink-400" size={18} /><input className="min-h-12 w-full rounded-md border border-ink-200 pl-11" placeholder="Trader phone number or KOLA ID" value={queryValue} onChange={(event) => setQueryValue(event.target.value)} /></div><Button onClick={runScoreQuery} disabled={queryLoading}>{queryLoading ? <LoadingDots /> : "Query Score"}</Button></div>{queryError ? <p className="mt-4 rounded-md bg-red-50 p-3 text-sm text-error">{queryError}</p> : null}{queried || (queryOnly && scoreResult) ? <div className="mt-6 section-reveal"><ResultCard approved={approved} onApprove={() => setApproved(true)} score={scoreResult} /></div> : null}</Card>
+        <Card className="mt-6 p-6"><h2 className="font-dm-serif text-3xl">Portfolio score trend</h2><div className="h-72">{chartReady ? <ResponsiveContainer><AreaChart data={chartData}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" /><YAxis /><Tooltip /><Area type="monotone" dataKey="score" stroke="#1f8450" fill="#c5eed8" /></AreaChart></ResponsiveContainer> : <div className="grid h-full place-items-center text-sm text-ink-400">Loading trend</div>}</div></Card>
       </section>
     </main>
   );
 }
 
-function ResultCard({ approved, onApprove }: { approved: boolean; onApprove: () => void }) {
+function ResultCard({ approved, onApprove, score }: { approved: boolean; onApprove: () => void; score: ScoreRead | null }) {
+  const confidence = typeof score?.explanation?.confidence === "string" ? score.explanation.confidence : "Demo";
+  const scoreValue = score?.kola_score ?? 714;
   return (
     <Card className="relative overflow-hidden p-6">
-      <div className="grid gap-6 lg:grid-cols-[1fr_260px]"><div><h2 className="font-dm-serif text-3xl">Aminat Ibrahim</h2><p className="text-ink-500">+234 803 XXX XXXX · Mile 12 Tomato Traders</p><ul className="mt-5 grid gap-2">{approvalSignals.map((s) => <li key={s} className="flex gap-2 text-sm text-ink-700"><CheckCircle2 className="text-kola-500" size={18} />{s}</li>)}</ul><div className="mt-6 grid gap-3 sm:grid-cols-3"><Input label="Amount (N)" defaultValue="120,000" /><Input label="Tenor (days)" defaultValue="90" /><Input label="Interest rate (%)" defaultValue="3.5" /></div><Button className="mt-5" onClick={onApprove}>Approve N120,000 · 90 days</Button></div><ScoreDisplay compact /></div>
+      <div className="grid gap-6 lg:grid-cols-[1fr_260px]"><div><h2 className="font-dm-serif text-3xl">KOLA Member</h2><p className="text-ink-500">{score ? `${score.verified_events_count} verified events - ${score.streak_weeks} week streak` : "Demo profile - query the backend for live data"}</p><ul className="mt-5 grid gap-2">{approvalSignals.map((s) => <li key={s} className="flex gap-2 text-sm text-ink-700"><CheckCircle2 className="text-kola-500" size={18} />{s}</li>)}</ul><div className="mt-6 grid gap-3 sm:grid-cols-3"><Input label="Amount (N)" defaultValue="120,000" /><Input label="Tenor (days)" defaultValue="90" /><Input label="Interest rate (%)" defaultValue="3.5" /></div><Button className="mt-5" onClick={onApprove}>Approve N120,000 - 90 days</Button></div><ScoreDisplay compact value={scoreValue} label={`${confidence} confidence`} /></div>
       {approved ? <div className="absolute inset-0 grid place-items-center bg-white/95 p-8 text-center backdrop-blur"><div><CheckCircle2 className="mx-auto h-20 w-20 text-kola-500" /><h3 className="mt-4 font-fraunces text-5xl text-kola-600">N120,000</h3><p className="mt-2 text-ink-600">Inventory credit approved in 0.8 seconds · Ref: KOLA-2025-08741</p><div className="mt-6 flex flex-col gap-3 sm:flex-row"><Button>Download approval letter</Button><Button variant="ghost">Make another query</Button></div></div></div> : null}
     </Card>
   );
@@ -465,7 +572,7 @@ function ResultCard({ approved, onApprove }: { approved: boolean; onApprove: () 
 export function NotFoundPage() {
   return (
     <main className="hero-grid grain grid min-h-screen place-items-center px-4 text-center text-white">
-      <div><div className="font-mono text-9xl text-kola-200/20">404</div><h1 className="mt-4 font-fraunces text-5xl italic">This page has no credit history.</h1><p className="mx-auto mt-5 max-w-xl text-white/65">Like Aminat before KOLA, this page is invisible to us. But she found her score, and you'll find your way back.</p><Button href="/" className="mt-8">Return to KOLA <ArrowRight size={18} /></Button></div>
+      <div><div className="font-mono text-9xl text-kola-200/20">404</div><h1 className="mt-4 font-fraunces text-5xl italic">This page has no credit history.</h1><p className="mx-auto mt-5 max-w-xl text-white/65">Like Aminat before KOLA, this page is invisible to us. But she found her score, and you&apos;ll find your way back.</p><Button href="/" className="mt-8">Return to KOLA <ArrowRight size={18} /></Button></div>
     </main>
   );
 }
